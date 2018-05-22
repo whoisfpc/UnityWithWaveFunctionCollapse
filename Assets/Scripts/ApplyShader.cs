@@ -22,7 +22,7 @@ public class ApplyShader : MonoBehaviour
         colors = new Color32[width * height];
         for (int i = 0; i < colors.Length; i++)
         {
-            colors[i] = new Color32(255, 0, 0, 1);
+            colors[i] = new Color32(255, 0, 0, 255);
         }
         texture.SetPixels32(colors);
         texture.Apply();
