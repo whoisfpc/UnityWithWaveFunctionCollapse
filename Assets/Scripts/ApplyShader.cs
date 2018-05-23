@@ -1,16 +1,18 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 
 public class ApplyShader : MonoBehaviour
 {
     public int width, height;
 
+    public int sleepMilliseconds = 100; 
+
     private Texture2D texture;
 
     private Color32[] colors;
 
-    private int i = 0;
+    private CancellationTokenSource ts;
 
     private void Start()
     {
@@ -26,17 +28,45 @@ public class ApplyShader : MonoBehaviour
         }
         texture.SetPixels32(colors);
         texture.Apply();
+
+        ts = new CancellationTokenSource();
+        CancellationToken ct = ts.Token;
+        Task.Factory.StartNew(() =>
+        {
+            int i = 0;
+            var random = new System.Random();
+            while (true)
+            {
+                if (ct.IsCancellationRequested)
+                {
+                    Debug.Log("task canceled");
+                    break;
+                }
+                lock (colors)
+                {
+                    colors[i].r = (byte)random.Next(256);
+                    colors[i].g = (byte)random.Next(256);
+                    colors[i].b = (byte)random.Next(256);
+                    i++;
+                    if (i == colors.Length) i = 0;
+                }
+                Thread.Sleep(sleepMilliseconds);
+            }
+        }, ct);
+
     }
 
     private void Update()
     {
-        colors[i].r = (byte)Random.Range(0, 256);
-        colors[i].g = (byte)Random.Range(0, 256);
-        colors[i].b = (byte)Random.Range(0, 256);
-        i++;
-        if (i == colors.Length) i = 0;
+        lock (colors)
+        {
+            texture.SetPixels32(colors);
+            texture.Apply();
+        }
+    }
 
-        texture.SetPixels32(colors);
-        texture.Apply();
+    private void OnDestroy()
+    {
+        ts.Cancel();
     }
 }

@@ -297,6 +297,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   width: 64
   height: 64
+  sleepMilliseconds: 33
 --- !u!64 &875780824
 MeshCollider:
   m_ObjectHideFlags: 0

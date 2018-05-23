@@ -217,6 +217,8 @@ namespace WaveFunctionCollapse
         public Texture2D Graphics()
         {
             Texture2D result = new Texture2D(FMX, FMY);
+            result.filterMode = FilterMode.Point;
+            result.wrapMode = TextureWrapMode.Clamp;
             Color32[] bitmapData = new Color32[result.height * result.width];
 
             if (observed != null)
