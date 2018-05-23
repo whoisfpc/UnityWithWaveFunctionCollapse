@@ -15,14 +15,12 @@ namespace WaveFunctionCollapse
     class OverlappingModel : Model
     {
         int[][][][] propagator;
-        int N, SMX, SMY, C;
-        long W;
+        int N;
 
         byte[][] patterns;
         List<Color32> colors;
         int ground;
 
-        byte[,] sample;
 
         public OverlappingModel(Texture2D texture, int N, int width, int height, bool periodicInput, bool periodicOutput, int symmetry, int ground)
             : base(width, height)
@@ -30,9 +28,9 @@ namespace WaveFunctionCollapse
             this.N = N;
             periodic = periodicOutput;
 
-            SMX = texture.width;
-            SMY = texture.height;
-            sample = new byte[SMX, SMY];
+            var SMX = texture.width;
+            var SMY = texture.height;
+            var sample = new byte[SMX, SMY];
             colors = new List<Color32>();
 
             var cs = texture.GetPixels32();
@@ -52,8 +50,52 @@ namespace WaveFunctionCollapse
                     sample[x, y] = (byte)i;
                 }
 
-            C = colors.Count;
-            W = Stuff.Power(C, N * N);
+            int C = colors.Count;
+            long W = Stuff.Power(C, N * N);
+
+            Func<Func<int, int, byte>, byte[]> pattern = (f) =>
+            {
+                byte[] result = new byte[N * N];
+                for (int y = 0; y < N; y++) for (int x = 0; x < N; x++) result[x + y * N] = f(x, y);
+                return result;
+            };
+
+            Func<int, int, byte[]> patternFromSample = (x, y) => pattern((dx, dy) => sample[(x + dx) % SMX, (y + dy) % SMY]);
+            Func<byte[], byte[]> rotate = (p) => pattern((x, y) => p[N - 1 - y + x * N]);
+            Func<byte[], byte[]> reflect = (p) => pattern((x, y) => p[N - 1 - x + y * N]);
+
+            Func<byte[], long> index = (p) =>
+            {
+                long result = 0, power = 1;
+                for (int i = 0; i < p.Length; i++)
+                {
+                    result += p[p.Length - 1 - i] * power;
+                    power *= C;
+                }
+                return result;
+            };
+
+            Func<long, byte[]> patternFromIndex = (ind) =>
+            {
+                long residue = ind, power = W;
+                byte[] result = new byte[N * N];
+
+                for (int i = 0; i < result.Length; i++)
+                {
+                    power /= C;
+                    int count = 0;
+
+                    while (residue >= power)
+                    {
+                        residue -= power;
+                        count++;
+                    }
+
+                    result[i] = (byte)count;
+                }
+
+                return result;
+            };
 
             Dictionary<long, int> weights = new Dictionary<long, int>();
             List<long> ordering = new List<long>();
@@ -100,6 +142,13 @@ namespace WaveFunctionCollapse
 
             for (int i = 0; i < wave.Length; i++) wave[i] = new bool[T];
 
+            Func<byte[], byte[], int, int, bool> agrees = (p1, p2, dx, dy) =>
+            {
+                int xmin = dx < 0 ? 0 : dx, xmax = dx < 0 ? dx + N : N, ymin = dy < 0 ? 0 : dy, ymax = dy < 0 ? dy + N : N;
+                for (int y = ymin; y < ymax; y++) for (int x = xmin; x < xmax; x++) if (p1[x + N * y] != p2[x - dx + N * (y - dy)]) return false;
+                return true;
+            };
+
             for (int x = 0; x < 2 * N - 1; x++)
             {
                 propagator[x] = new int[2 * N - 1][][];
@@ -116,58 +165,6 @@ namespace WaveFunctionCollapse
                 }
             }
         }
-
-        bool agrees(byte[] p1, byte[] p2, int dx, int dy)
-        {
-            int xmin = dx < 0 ? 0 : dx, xmax = dx < 0 ? dx + N : N, ymin = dy < 0 ? 0 : dy, ymax = dy < 0 ? dy + N : N;
-            for (int y = ymin; y < ymax; y++) for (int x = xmin; x < xmax; x++) if (p1[x + N * y] != p2[x - dx + N * (y - dy)]) return false;
-            return true;
-        }
-
-        byte[] pattern(Func<int, int, byte> f)
-        {
-            byte[] result = new byte[N * N];
-            for (int y = 0; y < N; y++) for (int x = 0; x < N; x++) result[x + y * N] = f(x, y);
-            return result;
-        }
-
-        byte[] patternFromSample(int x, int y) => pattern((dx, dy) => sample[(x + dx) % SMX, (y + dy) % SMY]);
-        byte[] rotate(byte[] p) => pattern((x, y) => p[N - 1 - y + x * N]);
-        byte[] reflect(byte[] p) => pattern((x, y) => p[N - 1 - x + y * N]);
-
-        long index(byte[] p)
-        {
-            long result = 0, power = 1;
-            for (int i = 0; i < p.Length; i++)
-            {
-                result += p[p.Length - 1 - i] * power;
-                power *= C;
-            }
-            return result;
-        }
-
-        byte[] patternFromIndex(long ind)
-        {
-            long residue = ind, power = W;
-            byte[] result = new byte[N * N];
-
-            for (int i = 0; i < result.Length; i++)
-            {
-                power /= C;
-                int count = 0;
-
-                while (residue >= power)
-                {
-                    residue -= power;
-                    count++;
-                }
-
-                result[i] = (byte)count;
-            }
-
-            return result;
-        }
-
 
         protected override bool OnBoundary(int i) => !periodic && (i % FMX + N > FMX || i / FMX + N > FMY);
 
@@ -212,63 +209,6 @@ namespace WaveFunctionCollapse
                             }
                     }
             }
-        }
-
-        public Texture2D Graphics()
-        {
-            Texture2D result = new Texture2D(FMX, FMY);
-            result.filterMode = FilterMode.Point;
-            result.wrapMode = TextureWrapMode.Clamp;
-            Color32[] bitmapData = new Color32[result.height * result.width];
-
-            if (observed != null)
-            {
-                for (int y = 0; y < FMY; y++)
-                {
-                    int dy = y < FMY - N + 1 ? 0 : N - 1;
-                    for (int x = 0; x < FMX; x++)
-                    {
-                        int dx = x < FMX - N + 1 ? 0 : N - 1;
-                        Color c = colors[patterns[observed[x - dx + (y - dy) * FMX]][dx + dy * N]];
-                        bitmapData[x + y * FMX] = c;
-                    }
-                }
-            }
-            else
-            {
-                for (int i = 0; i < wave.Length; i++)
-                {
-                    int contributors = 0, r = 0, g = 0, b = 0;
-                    int x = i % FMX, y = i / FMX;
-
-                    for (int dy = 0; dy < N; dy++) for (int dx = 0; dx < N; dx++)
-                        {
-                            int sx = x - dx;
-                            if (sx < 0) sx += FMX;
-
-                            int sy = y - dy;
-                            if (sy < 0) sy += FMY;
-
-                            int s = sx + sy * FMX;
-                            if (OnBoundary(s)) continue;
-                            for (int t = 0; t < T; t++) if (wave[s][t])
-                                {
-                                    contributors++;
-                                    Color32 color = colors[patterns[t][dx + dy * N]];
-                                    r += color.r;
-                                    g += color.g;
-                                    b += color.b;
-                                }
-                        }
-
-                    bitmapData[i] = new Color32((byte)(r / contributors), (byte)(g / contributors), (byte)(b / contributors), 255);
-                }
-            }
-
-            result.SetPixels32(bitmapData);
-            result.Apply();
-
-            return result;
         }
 
         protected override void Clear()
