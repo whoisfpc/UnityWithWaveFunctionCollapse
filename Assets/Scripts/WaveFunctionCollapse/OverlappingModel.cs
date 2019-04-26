@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace WaveFunctionCollapse
 {
-    class OverlappingModel : Model
+    public class OverlappingModel : Model
     {
         int N; // Sample Length
         byte[][] patterns; // patterns[X][N*N], every patterns[i], is an array of index

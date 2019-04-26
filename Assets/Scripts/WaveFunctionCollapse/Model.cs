@@ -10,7 +10,7 @@ using System;
 
 namespace WaveFunctionCollapse
 {
-    abstract class Model
+    public abstract class Model
     {
         protected bool[][] wave; // wave[FMX*FMY][T]，每个元素代表某个pattern在某个像素位置的状态，true代表not forbidden, false 代表forbidden，初始状态为true
 
