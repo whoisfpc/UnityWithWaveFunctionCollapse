@@ -5,6 +5,9 @@ using WaveFunctionCollapse;
 
 public class WPFTest : MonoBehaviour {
 
+    [Header("Random")]
+    public int seed;
+
     public int step = 1;
 
     public int N = 2;
@@ -77,7 +80,14 @@ public class WPFTest : MonoBehaviour {
         if (GUI.Button(new Rect(30, 30, 300, 50), "Start"))
         {
             model = new OverlappingModel(texture, N, width, height, periodicInput, periodicOutput, symmetry, ground);
-            model.Setup(Random.Range(0, int.MaxValue));
+            if (seed == 0)
+            {
+                model.Setup(Random.Range(0, int.MaxValue));
+            }
+            else
+            {
+               model.Setup(seed); 
+            }
             started = true;
             pause = false;
         

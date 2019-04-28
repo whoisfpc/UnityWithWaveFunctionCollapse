@@ -12,6 +12,55 @@ using UnityEngine;
 
 namespace WaveFunctionCollapse
 {
+
+    public class Pattern : IEquatable<Pattern>
+    {
+        public readonly int N;
+
+        public byte[] patternBytes;
+
+        public Pattern(byte[] patternBytes)
+        {
+            this.patternBytes = patternBytes;
+            N = patternBytes.Length;
+        }
+
+        public override int GetHashCode()
+        {
+            int hash = 17;
+            for (int i = 0; i < patternBytes.Length; i++)
+            {
+                hash = hash * 31 + patternBytes[i];
+            }
+            return hash;
+        }
+
+        public bool Equals(Pattern other)
+        {
+            if (patternBytes.Length != other.patternBytes.Length)
+            {
+                return false;
+            }
+            for (int i = 0; i < patternBytes.Length; i++)
+            {
+                if (patternBytes[i] != other.patternBytes[i])
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public override bool Equals(object other)
+        {
+            if (!(other is Pattern))
+            {
+                return false;
+            }
+            return Equals((Pattern)other);
+        }
+    }
+
     public class OverlappingModel : Model
     {
         int N; // Sample Length
@@ -31,25 +80,22 @@ namespace WaveFunctionCollapse
             var tmpColors = texture.GetPixels32(); // TODO: (0, 0) 点在左下角
             // Record color, and make a color-index list
             for (int y = 0; y < SMY; y++) for (int x = 0; x < SMX; x++)
+            {
+                Color32 color = tmpColors[x + (SMY - 1 - y) * SMX];
+
+                int i = 0;
+                foreach (var c in colors)
                 {
-                    Color32 color = tmpColors[x + (SMY - 1 - y) * SMX];
-
-                    int i = 0;
-                    foreach (var c in colors)
-                    {
-                        if (c.a == color.a && c.r == color.r && c.g == color.g && c.b == color.b) break;
-                        i++;
-                    }
-
-                    if (i == colors.Count) colors.Add(color);
-                    sample[x, y] = (byte)i;
+                    if (c.a == color.a && c.r == color.r && c.g == color.g && c.b == color.b) break;
+                    i++;
                 }
 
-            int C = colors.Count; // Total different color numbers
-            long W = Stuff.Power(C, N * N); // Max different pattern numbers
+                if (i == colors.Count) colors.Add(color);
+                sample[x, y] = (byte)i;
+            }
 
             // Process raw patterns, return a new pattern (N*N byte array)
-            Func<Func<int, int, byte>, byte[]> pattern = (Func<int, int, byte>  f) =>
+            byte[] getPattern (Func<int, int, byte>  f)
             {
                 byte[] result = new byte[N * N];
                 for (int y = 0; y < N; y++) for (int x = 0; x < N; x++) result[x + y * N] = f(x, y);
@@ -57,48 +103,14 @@ namespace WaveFunctionCollapse
             };
 
             // Sample a raw pattern from sample
-            Func<int, int, byte[]> patternFromSample = (int x, int y) => pattern((dx, dy) => sample[(x + dx) % SMX, (y + dy) % SMY]);
+            byte[] patternFromSample(int x, int y) => getPattern((dx, dy) => sample[(x + dx) % SMX, (y + dy) % SMY]);
             // Rotate a pattern (anti-clockwise)
-            Func<byte[], byte[]> rotate = (byte[] p) => pattern((x, y) => p[N - 1 - y + x * N]);
+            byte[] rotate(byte[] p) => getPattern((x, y) => p[N - 1 - y + x * N]);
             // Reflect a pattern
-            Func< byte[], byte[]> reflect = (byte[] p) => pattern((x, y) => p[N - 1 - x + y * N]);
+            byte[] reflect(byte[] p) => getPattern((x, y) => p[N - 1 - x + y * N]);
 
-            // Convert a pattern to a unique long number
-            Func< byte[], long> index = (byte[] p) =>
-            {
-                long result = 0, power = 1;
-                for (int i = 0; i < p.Length; i++)
-                {
-                    result += p[p.Length - 1 - i] * power;
-                    power *= C;
-                }
-                return result;
-            };
-
-            // Decode pattern from the long number
-            Func<long, byte[]> patternFromIndex = (long ind) =>
-            {
-                long residue = ind, power = W;
-                byte[] result = new byte[N * N];
-
-                for (int i = 0; i < result.Length; i++)
-                {
-                    power /= C;
-                    int count = 0;
-
-                    while (residue >= power)
-                    {
-                        residue -= power;
-                        count++;
-                    }
-
-                    result[i] = (byte)count;
-                }
-
-                return result;
-            };
-
-            Dictionary<long, int> weights = new Dictionary<long, int>();
+            // Dictionary<long, int> weights = new Dictionary<long, int>();
+            Dictionary<Pattern, int> patternDict = new Dictionary<Pattern, int>();
 
             for (int y = 0; y < (periodicInput ? SMY : SMY - N + 1); y++) for (int x = 0; x < (periodicInput ? SMX : SMX - N + 1); x++)
                 {
@@ -117,24 +129,28 @@ namespace WaveFunctionCollapse
                     // symmetry决定了是否将pattern旋转反射后的新pattern纳入pattern列表中
                     for (int k = 0; k < symmetry; k++)
                     {
-                        long ind = index(ps[k]);
-                        if (weights.ContainsKey(ind)) weights[ind]++;
+                        Pattern pt = new Pattern(ps[k]);
+                        if (patternDict.ContainsKey(pt))
+                        {
+                            patternDict[pt]++;
+                        }
                         else
                         {
-                            weights.Add(ind, 1);
+                            patternDict.Add(pt, 1);
                         }
                     }
                 }
 
-            T = weights.Count;// 不重复的pattern数量
-            this.ground = (ground + T) % T; // ground输入是负的
-            patterns = new byte[T][];
-            base.weights = new double[T]; // 记录了每个pattern的出现次数，取决于symmetry，还会考虑旋转和反射后的量
+            // patternCount = weights.Count;// 不重复的pattern数量
+            patternCount = patternDict.Count;
+            this.ground = (ground + patternCount) % patternCount; // ground输入是负的
+            patterns = new byte[patternCount][];
+            base.weights = new double[patternCount]; // 记录了每个pattern的出现次数，取决于symmetry，还会考虑旋转和反射后的量
 
             int counter = 0;
-            foreach (var kv in weights)
+            foreach (var kv in patternDict)
             {
-                patterns[counter] = patternFromIndex(kv.Key);
+                patterns[counter] = kv.Key.patternBytes;
                 base.weights[counter] = kv.Value;
                 counter++;
             }
@@ -156,11 +172,11 @@ namespace WaveFunctionCollapse
             // 确定任意两个pattern在上下左右4个方向上各移动一格后是否重叠(这里有简化，实际overlap的可能有(2*N-1)^2个)
             for (int d = 0; d < 4; d++)
             {
-                propagator[d] = new int[T][];
-                for (int t = 0; t < T; t++)
+                propagator[d] = new int[patternCount][];
+                for (int t = 0; t < patternCount; t++)
                 {
                     List<int> list = new List<int>();
-                    for (int t2 = 0; t2 < T; t2++)
+                    for (int t2 = 0; t2 < patternCount; t2++)
                         if (agrees(patterns[t], patterns[t2], DX[d], DY[d])) list.Add(t2);
 
                     propagator[d][t] = list.ToArray();
@@ -209,7 +225,7 @@ namespace WaveFunctionCollapse
 
                             int s = sx + sy * FMX;
                             if (OnBoundary(sx, sy)) continue;
-                            for (int t = 0; t < T; t++) if (wave[s][t])
+                            for (int t = 0; t < patternCount; t++) if (wave[s][t])
                                 {
                                     contributors++;
                                     Color32 color = colors[patterns[t][dx + dy * N]];
@@ -262,7 +278,7 @@ namespace WaveFunctionCollapse
                 for (int x = 0; x < FMX; x++)
                 {
                     // 对于最后一行，只保留ground pattern
-                    for (int t = 0; t < T; t++)
+                    for (int t = 0; t < patternCount; t++)
                         if (t != ground)
                             Ban(x + (FMY - 1) * FMX, t);
 

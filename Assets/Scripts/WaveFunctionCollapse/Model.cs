@@ -7,6 +7,9 @@ The software is provided "as is", without warranty of any kind, express or impli
 */
 
 using System;
+using System.Collections.Generic;
+
+
 
 namespace WaveFunctionCollapse
 {
@@ -18,12 +21,11 @@ namespace WaveFunctionCollapse
         int[][][] compatible; // compatible[FMX*FMY][T][4]，compatible[i][t][d] 对于每个像素i，对于pattern t，方向d上兼容的pattern数量
         protected int[] observed; // 保留最后结果的数组，保存的时pattern的index
 
-        Tuple<int, int>[] stack; // 只是模拟一个stack，Tuple<int, int>存的时被ban掉的像素位置索引和对应的pattern索引
-        int stacksize;
+        Stack<Tuple<int, int>> bannedStack; // Tuple<int, int>存的被ban掉的像素位置索引和对应的pattern索引
 
         protected Random random;
         protected int FMX, FMY; //  输出图片的width和height
-        protected int T; // 不重复的pattern数量
+        protected int patternCount; // 不重复的pattern数量
         protected bool periodic; // whether output graphics is periodic
 
         protected double[] weights; // 记录了每个pattern的出现次数，取决于symmetry的值，还会考虑旋转和反射后的量
@@ -49,17 +51,17 @@ namespace WaveFunctionCollapse
             compatible = new int[wave.Length][][];
             for (int i = 0; i < wave.Length; i++)
             {
-                wave[i] = new bool[T];
-                compatible[i] = new int[T][];
-                for (int t = 0; t < T; t++)
+                wave[i] = new bool[patternCount];
+                compatible[i] = new int[patternCount][];
+                for (int t = 0; t < patternCount; t++)
                     compatible[i][t] = new int[4];
             }
 
-            weightLogWeights = new double[T];
+            weightLogWeights = new double[patternCount];
             sumOfWeights = 0;
             sumOfWeightLogWeights = 0;
 
-            for (int t = 0; t < T; t++)
+            for (int t = 0; t < patternCount; t++)
             {
                 weightLogWeights[t] = weights[t] * Math.Log(weights[t]);
                 sumOfWeights += weights[t];
@@ -73,8 +75,7 @@ namespace WaveFunctionCollapse
             sumsOfWeightLogWeights = new double[FMX * FMY];
             entropies = new double[FMX * FMY];
 
-            stack = new Tuple<int, int>[wave.Length * T];
-            stacksize = 0;
+            bannedStack = new Stack<Tuple<int, int>>(wave.Length);
         }
 
         bool? Observe()
@@ -110,7 +111,7 @@ namespace WaveFunctionCollapse
             {
                 observed = new int[FMX * FMY];
                 for (int i = 0; i < wave.Length; i++)
-                    for (int t = 0; t < T; t++)
+                    for (int t = 0; t < patternCount; t++)
                         if (wave[i][t])
                         {
                             observed[i] = t; break;
@@ -120,14 +121,14 @@ namespace WaveFunctionCollapse
             }
 
             // 每个可选的pattern占的权重
-            double[] distribution = new double[T];
-            for (int t = 0; t < T; t++)
+            double[] distribution = new double[patternCount];
+            for (int t = 0; t < patternCount; t++)
                 distribution[t] = wave[argmin][t] ? weights[t] : 0;
 
             // 从中按照每个pattern的概率选择一个pattern
             int r = distribution.Random(random.NextDouble());
 
-            for (int t = 0; t < T; t++)
+            for (int t = 0; t < patternCount; t++)
                 if (wave[argmin][t] != (t == r))
                     Ban(argmin, t);
 
@@ -136,10 +137,9 @@ namespace WaveFunctionCollapse
 
         protected void Propagate()
         {
-            while (stacksize > 0)
+            while (bannedStack.Count > 0)
             {
-                var e1 = stack[stacksize - 1];
-                stacksize--;
+                var e1 = bannedStack.Pop();
 
                 int i1 = e1.Item1; // i1为ban掉的某个像素位置索引
                 int x1 = i1 % FMX, y1 = i1 / FMX; // 对应的坐标
@@ -230,8 +230,7 @@ namespace WaveFunctionCollapse
 
             int[] comp = compatible[i][t];
             for (int d = 0; d < 4; d++) comp[d] = 0;
-            stack[stacksize] = new Tuple<int, int>(i, t);
-            stacksize++;
+            bannedStack.Push(Tuple.Create(i, t));
 
             double sum = sumsOfWeights[i];
             entropies[i] += sumsOfWeightLogWeights[i] / sum - Math.Log(sum);
@@ -249,7 +248,7 @@ namespace WaveFunctionCollapse
         {
             for (int i = 0; i < wave.Length; i++)
             {
-                for (int t = 0; t < T; t++)
+                for (int t = 0; t < patternCount; t++)
                 {
                     wave[i][t] = true; // set all wave[i][t] not forbidden
                                        // 确定每个像素i，对于pattern t，方向d上兼容的pattern数量
