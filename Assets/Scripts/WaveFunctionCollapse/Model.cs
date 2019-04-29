@@ -168,13 +168,13 @@ namespace WaveFunctionCollapse
                     int x2 = x1 + dx, y2 = y1 + dy;
                     if (OnBoundary(x2, y2)) continue;
 
-                    // 一下两个if，其实只有在输出图像是periodic时才会走到
+                    // 以下两个if，其实只有在输出图像是periodic时才会走到
                     if (x2 < 0) x2 += FMX;
                     else if (x2 >= FMX) x2 -= FMX;
                     if (y2 < 0) y2 += FMY;
                     else if (y2 >= FMY) y2 -= FMY;
 
-                    int i2 = x2 + y2 * FMX;
+                    int i2 = x2 + y2 * FMX; // get index from coords
                     int[] p = propagator[d][t]; // ban掉的pattern在方向d上可选的pattern列表
                     int[][] compat = compatible[i2]; // 像素i2位置，对于pattern T，可兼容的pattern数量列表
 
