@@ -17,6 +17,8 @@ namespace WaveFunctionCollapse
     {
         public readonly int N;
 
+        public int idx;
+
         public byte[] patternBytes;
 
         public Pattern(byte[] patternBytes)
@@ -136,6 +138,7 @@ namespace WaveFunctionCollapse
                         }
                         else
                         {
+                            pt.idx = patternDict.Count;
                             patternDict.Add(pt, 1);
                         }
                     }
@@ -147,12 +150,10 @@ namespace WaveFunctionCollapse
             patterns = new byte[patternCount][];
             base.weights = new double[patternCount]; // 记录了每个pattern的出现次数，取决于symmetry，还会考虑旋转和反射后的量
 
-            int counter = 0;
             foreach (var kv in patternDict)
             {
-                patterns[counter] = kv.Key.patternBytes;
-                base.weights[counter] = kv.Value;
-                counter++;
+                patterns[kv.Key.idx] = kv.Key.patternBytes;
+                base.weights[kv.Key.idx] = kv.Value;
             }
 
             // 判断pattern2在移动(dx,dy)后，是否和pattern1重叠

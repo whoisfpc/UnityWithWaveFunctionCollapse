@@ -9,10 +9,15 @@ The software is provided "as is", without warranty of any kind, express or impli
 using System;
 using System.Collections.Generic;
 
-
-
 namespace WaveFunctionCollapse
 {
+    public enum ObserveResult
+    {
+        Contradiction,
+        Progress,
+        Finish,
+    }
+
     public abstract class Model
     {
         protected bool[][] wave; // wave[FMX*FMY][T]，每个元素代表某个pattern在某个像素位置的状态，true代表not forbidden, false 代表forbidden，初始状态为true
@@ -78,7 +83,7 @@ namespace WaveFunctionCollapse
             bannedStack = new Stack<Tuple<int, int>>(wave.Length);
         }
 
-        bool? Observe()
+        ObserveResult Observe()
         {
             double min = 1E+3; // 满足条件的最小熵
             int argmin = -1; // 最小熵对应的index
@@ -89,7 +94,7 @@ namespace WaveFunctionCollapse
                 if (OnBoundary(i % FMX, i / FMX)) continue;
 
                 int amount = sumsOfOnes[i];
-                if (amount == 0) return false; // CONTRADICTION
+                if (amount == 0) return ObserveResult.Contradiction; // CONTRADICTION
 
                 double entropy = entropies[i];
                 // 只有在可选pattern不止一个，且熵小于当前最小值时才考虑
@@ -117,7 +122,7 @@ namespace WaveFunctionCollapse
                             observed[i] = t; break;
                         }
 
-                return true; // FINISH
+                return ObserveResult.Finish; // FINISH
             }
 
             // 每个可选的pattern占的权重
@@ -132,16 +137,16 @@ namespace WaveFunctionCollapse
                 if (wave[argmin][t] != (t == r))
                     Ban(argmin, t);
 
-            return null; // PROGRESS
+            return ObserveResult.Progress; // PROGRESS
         }
 
         protected void Propagate()
         {
             while (bannedStack.Count > 0)
             {
-                var e1 = bannedStack.Pop();
+                var (i, t) = bannedStack.Pop();
 
-                int i1 = e1.Item1; // i1为ban掉的某个像素位置索引
+                int i1 = i; // i1为ban掉的某个像素位置索引
                 int x1 = i1 % FMX, y1 = i1 / FMX; // 对应的坐标
 
                 // 对当前位置，上下左右四个方向
@@ -158,7 +163,7 @@ namespace WaveFunctionCollapse
                     else if (y2 >= FMY) y2 -= FMY;
 
                     int i2 = x2 + y2 * FMX;
-                    int[] p = propagator[d][e1.Item2]; // ban掉的pattern在方向d上可选的pattern列表
+                    int[] p = propagator[d][t]; // ban掉的pattern在方向d上可选的pattern列表
                     int[][] compat = compatible[i2]; // 像素i2位置，对于pattern T，可兼容的pattern数量列表
 
                     for (int l = 0; l < p.Length; l++)
@@ -183,30 +188,29 @@ namespace WaveFunctionCollapse
             setuped = true;
         }
 
-        public bool? Forward(int limit)
+        public ObserveResult Forward(int limit)
         {
             if (!setuped)
             {
-                UnityEngine.Debug.Log("MUST SETUP BEFORE FORWARD!");
-                return false;
+                return ObserveResult.Contradiction;
             }
 
             for (int l = 0; l < limit || limit == 0; l++)
             {
-                bool? result = Observe();
-                if (result != null)
+                var result = Observe();
+                if (result != ObserveResult.Progress)
                 {
                     setuped = false;
-                    return result.Value;
+                    return result;
                 }
                 Propagate();
             }
 
-            return null;
+            return ObserveResult.Progress;
         }
 
         // seed: 随机种子, limit: 限制observe次数，只至多确定limit数量的像素点
-        public bool Run(int seed, int limit)
+        public ObserveResult Run(int seed, int limit)
         {
             if (wave == null) Init();
 
@@ -215,12 +219,12 @@ namespace WaveFunctionCollapse
 
             for (int l = 0; l < limit || limit == 0; l++)
             {
-                bool? result = Observe();
-                if (result != null) return result.Value;
+                var result = Observe();
+                if (result != ObserveResult.Progress) return result;
                 Propagate();
             }
 
-            return true;
+            return ObserveResult.Finish;
         }
 
         // forbid wave[i][t] and update entropies[i]

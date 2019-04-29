@@ -48,29 +48,36 @@ public class WPFTest : MonoBehaviour {
     {
         if (started && !pause)
         {
-            bool? finished = model.Forward(step);
-            if (finished.HasValue)
+            var result = model.Forward(step);
+            switch (result)
             {
-                if (finished.Value)
+                case ObserveResult.Finish:
                 {
                     model.Capture(colors);
                     outputTexture.SetPixels32(colors);
                     outputTexture.Apply();
                     started = false;
                     Debug.Log("ALL FINISH");
+                    pause = true;
+                    break;
                 }
-                else
+                case ObserveResult.Progress:
+                {
+                    model.Capture(colors);
+                    outputTexture.SetPixels32(colors);
+                    outputTexture.Apply();
+                   break;
+                }
+                case ObserveResult.Contradiction:
                 {
                     started = false;
                     Debug.Log("CONTRADICTION");
+                    pause = true;
+                    break;
                 }
-                pause = true;
-            }
-            else
-            {
-                model.Capture(colors);
-                outputTexture.SetPixels32(colors);
-                outputTexture.Apply();
+                default:
+                    pause = true;
+                    break;
             }
         }
     }
