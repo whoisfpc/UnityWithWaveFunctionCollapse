@@ -195,7 +195,7 @@ namespace WaveFunctionCollapse
                 return;
             }
 
-            if (observed != null)
+            if (done)
             {
                 for (int y = 0; y < FMY; y++)
                 {

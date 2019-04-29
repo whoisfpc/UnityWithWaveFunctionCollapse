@@ -37,6 +37,7 @@ namespace WaveFunctionCollapse
         double[] weightLogWeights; // weightLogWeights[i] = weights[i] * Math.Log(weights[i]);
         double sumOfWeights, sumOfWeightLogWeights, startingEntropy;
 
+        double[] distribution; // 每个可选的pattern占的权重
         int[] sumsOfOnes; // sumsOfOnes[FMX*FMY] 初始值为 pattern 总数
         double[] sumsOfWeights;// 初始值为 weights和
         double[] sumsOfWeightLogWeights; // 初始值为weightlogweights和
@@ -44,10 +45,13 @@ namespace WaveFunctionCollapse
 
         private bool setuped;
 
+        protected bool done;
+
         protected Model(int width, int height)
         {
             FMX = width;
             FMY = height;
+            observed = new int[FMX * FMY];
         }
 
         void Init()
@@ -62,6 +66,7 @@ namespace WaveFunctionCollapse
                     compatible[i][t] = new int[4];
             }
 
+            distribution = new double[patternCount];
             weightLogWeights = new double[patternCount];
             sumOfWeights = 0;
             sumOfWeightLogWeights = 0;
@@ -114,28 +119,36 @@ namespace WaveFunctionCollapse
             // 代表整张图只剩下最后一个像素位置, completely observed state
             if (argmin == -1)
             {
-                observed = new int[FMX * FMY];
+                done = true;
                 for (int i = 0; i < wave.Length; i++)
+                {
                     for (int t = 0; t < patternCount; t++)
+                    {
                         if (wave[i][t])
                         {
-                            observed[i] = t; break;
+                            observed[i] = t;
+                            break;
                         }
-
+                    }
+                }
                 return ObserveResult.Finish; // FINISH
             }
 
-            // 每个可选的pattern占的权重
-            double[] distribution = new double[patternCount];
             for (int t = 0; t < patternCount; t++)
+            {
                 distribution[t] = wave[argmin][t] ? weights[t] : 0;
+            }
 
             // 从中按照每个pattern的概率选择一个pattern
             int r = distribution.Random(random.NextDouble());
 
             for (int t = 0; t < patternCount; t++)
-                if (wave[argmin][t] != (t == r))
+            {
+                if (wave[argmin][t] && t != r)
+                {
                     Ban(argmin, t);
+                }
+            }
 
             return ObserveResult.Progress; // PROGRESS
         }
@@ -146,8 +159,7 @@ namespace WaveFunctionCollapse
             {
                 var (i, t) = bannedStack.Pop();
 
-                int i1 = i; // i1为ban掉的某个像素位置索引
-                int x1 = i1 % FMX, y1 = i1 / FMX; // 对应的坐标
+                int x1 = i % FMX, y1 = i / FMX; // 对应的坐标
 
                 // 对当前位置，上下左右四个方向
                 for (int d = 0; d < 4; d++)
@@ -231,10 +243,13 @@ namespace WaveFunctionCollapse
         protected void Ban(int i, int t)
         {
             wave[i][t] = false;
+            bannedStack.Push(Tuple.Create(i, t));
 
             int[] comp = compatible[i][t];
-            for (int d = 0; d < 4; d++) comp[d] = 0;
-            bannedStack.Push(Tuple.Create(i, t));
+            for (int d = 0; d < 4; d++)
+            {
+                comp[d] = 0;
+            }
 
             double sum = sumsOfWeights[i];
             entropies[i] += sumsOfWeightLogWeights[i] / sum - Math.Log(sum);
@@ -250,6 +265,7 @@ namespace WaveFunctionCollapse
 
         protected virtual void Clear()
         {
+            done = false;
             for (int i = 0; i < wave.Length; i++)
             {
                 for (int t = 0; t < patternCount; t++)
