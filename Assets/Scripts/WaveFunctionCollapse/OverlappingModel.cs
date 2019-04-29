@@ -19,33 +19,33 @@ namespace WaveFunctionCollapse
 
         public int idx;
 
-        public byte[] patternBytes;
+        public byte[] bytes;
 
         public Pattern(byte[] patternBytes)
         {
-            this.patternBytes = patternBytes;
+            this.bytes = patternBytes;
             N = patternBytes.Length;
         }
 
         public override int GetHashCode()
         {
             int hash = 17;
-            for (int i = 0; i < patternBytes.Length; i++)
+            for (int i = 0; i < bytes.Length; i++)
             {
-                hash = hash * 31 + patternBytes[i];
+                hash = hash * 31 + bytes[i];
             }
             return hash;
         }
 
         public bool Equals(Pattern other)
         {
-            if (patternBytes.Length != other.patternBytes.Length)
+            if (bytes.Length != other.bytes.Length)
             {
                 return false;
             }
-            for (int i = 0; i < patternBytes.Length; i++)
+            for (int i = 0; i < bytes.Length; i++)
             {
-                if (patternBytes[i] != other.patternBytes[i])
+                if (bytes[i] != other.bytes[i])
                 {
                     return false;
                 }
@@ -66,7 +66,7 @@ namespace WaveFunctionCollapse
     public class OverlappingModel : Model
     {
         int N; // Sample Length
-        byte[][] patterns; // patterns[X][N*N], every patterns[i], is an array of index
+        Pattern[] patterns;
         List<Color32> colors; // unique colors
         int ground;
 
@@ -147,12 +147,12 @@ namespace WaveFunctionCollapse
             // patternCount = weights.Count;// 不重复的pattern数量
             patternCount = patternDict.Count;
             this.ground = (ground + patternCount) % patternCount; // ground输入是负的
-            patterns = new byte[patternCount][];
+            patterns = new Pattern[patternCount];
             base.weights = new double[patternCount]; // 记录了每个pattern的出现次数，取决于symmetry，还会考虑旋转和反射后的量
 
             foreach (var kv in patternDict)
             {
-                patterns[kv.Key.idx] = kv.Key.patternBytes;
+                patterns[kv.Key.idx] = kv.Key;
                 base.weights[kv.Key.idx] = kv.Value;
             }
 
@@ -178,7 +178,7 @@ namespace WaveFunctionCollapse
                 {
                     List<int> list = new List<int>();
                     for (int t2 = 0; t2 < patternCount; t2++)
-                        if (agrees(patterns[t], patterns[t2], DX[d], DY[d])) list.Add(t2);
+                        if (agrees(patterns[t].bytes, patterns[t2].bytes, DX[d], DY[d])) list.Add(t2);
 
                     propagator[d][t] = list.ToArray();
                 }
@@ -203,7 +203,7 @@ namespace WaveFunctionCollapse
                     for (int x = 0; x < FMX; x++)
                     {
                         int dx = x < FMX - N + 1 ? 0 : N - 1;
-                        Color32 c = colors[patterns[observed[x - dx + (y - dy) * FMX]][dx + dy * N]];
+                        Color32 c = colors[patterns[observed[x - dx + (y - dy) * FMX]].bytes[dx + dy * N]];
                         bitmapData[x + y * FMX] = c;
                     }
                 }
@@ -229,7 +229,7 @@ namespace WaveFunctionCollapse
                             for (int t = 0; t < patternCount; t++) if (wave[s][t])
                                 {
                                     contributors++;
-                                    Color32 color = colors[patterns[t][dx + dy * N]];
+                                    Color32 color = colors[patterns[t].bytes[dx + dy * N]];
                                     r += color.r;
                                     g += color.g;
                                     b += color.b;
