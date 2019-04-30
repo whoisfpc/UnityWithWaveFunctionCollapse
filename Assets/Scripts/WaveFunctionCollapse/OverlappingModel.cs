@@ -140,24 +140,31 @@ namespace WaveFunctionCollapse
             patternCount = patternDict.Count;
             this.ground = (ground + patternCount) % patternCount; // ground输入是负的
             patterns = new Pattern[patternCount];
-            base.weights = new double[patternCount]; // 记录了每个pattern的出现次数，取决于symmetry，还会考虑旋转和反射后的量
+            weights = new double[patternCount]; // 记录了每个pattern的出现次数，取决于symmetry，还会考虑旋转和反射后的量
 
             foreach (var kv in patternDict)
             {
                 patterns[kv.Key.idx] = kv.Key;
-                base.weights[kv.Key.idx] = kv.Value;
+                weights[kv.Key.idx] = kv.Value;
             }
 
             // 判断pattern1在移动(dx,dy)后，是否和pattern2重叠
-            Func<byte[], byte[], int, int, bool> agrees = (byte[] p1, byte[] p2, int dx, int dy) =>
+            bool agrees(byte[] p1, byte[] p2, int dx, int dy)
             {
                 int xmin = dx < 0 ? 0 : dx;
                 int xmax = dx < 0 ? dx + N : N;
                 int ymin = dy < 0 ? 0 : dy;
                 int ymax = dy < 0 ? dy + N : N;
                 for (int y = ymin; y < ymax; y++)
+                {
                     for (int x = xmin; x < xmax; x++)
-                        if (p1[x + N * y] != p2[x - dx + N * (y - dy)]) return false;
+                    {
+                        if (p1[x + N * y] != p2[x - dx + N * (y - dy)]) 
+                        {
+                        return false;
+                        }
+                    }
+                }
                 return true;
             };
 
@@ -217,7 +224,8 @@ namespace WaveFunctionCollapse
                     for (int x = 0; x < FMX; x++)
                     {
                         int dx = x < FMX - N + 1 ? 0 : N - 1;
-                        Color32 c = colors[patterns[observed[x - dx + (y - dy) * FMX]].bytes[dx + dy * N]];
+                        int colorIdx = patterns[observed[x - dx + (y - dy) * FMX]].bytes[dx + dy * N];
+                        Color32 c = colors[colorIdx];
                         bitmapData[x + y * FMX] = c;
                     }
                 }

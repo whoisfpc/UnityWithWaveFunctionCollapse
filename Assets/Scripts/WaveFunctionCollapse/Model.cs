@@ -62,6 +62,9 @@ namespace WaveFunctionCollapse
             observed = new int[FMX * FMY];
         }
 
+        private int CoordsToFlat(int x, int y) => x + y * FMX;
+        private (int x, int y) FlatToCoords(int i) => (i % FMX, i / FMX);
+
         void Init()
         {
             wave = new bool[FMX * FMY][];
@@ -103,11 +106,16 @@ namespace WaveFunctionCollapse
 
             for (int i = 0; i < wave.Length; i++)
             {
-                // i % FMX = x, i / FMY = y
-                if (OnBoundary(i % FMX, i / FMX)) continue;
-
+                var (x, y) = FlatToCoords(i);
+                if (OnBoundary(x, y))
+                {
+                    continue;
+                }
                 int amount = sumsOfOnes[i];
-                if (amount == 0) return ObserveResult.Contradiction; // CONTRADICTION
+                if (amount == 0)
+                {
+                    return ObserveResult.Contradiction; // CONTRADICTION
+                }
 
                 double entropy = entropies[i];
                 // 只有在可选pattern不止一个，且熵小于当前最小值时才考虑
@@ -167,14 +175,17 @@ namespace WaveFunctionCollapse
             {
                 var (i, t) = bannedStack.Pop();
 
-                int x1 = i % FMX, y1 = i / FMX; // 对应的坐标
+                var (x1, y1) = FlatToCoords(i);
 
                 // 对当前位置，上下左右四个方向
                 for (int d = 0; d < 4; d++)
                 {
                     int dx = DX[d], dy = DY[d];
                     int x2 = x1 + dx, y2 = y1 + dy;
-                    if (OnBoundary(x2, y2)) continue;
+                    if (OnBoundary(x2, y2))
+                    {
+                        continue;
+                    }
 
                     // 以下两个if，其实只有在输出图像是periodic时才会走到
                     if (x2 < 0) x2 += FMX;
@@ -182,7 +193,7 @@ namespace WaveFunctionCollapse
                     if (y2 < 0) y2 += FMY;
                     else if (y2 >= FMY) y2 -= FMY;
 
-                    int i2 = x2 + y2 * FMX; // get index from coords
+                    int i2 = CoordsToFlat(x2, y2);
                     int[] p = propagator[d][t]; // ban掉的pattern在方向d上可选的pattern列表
                     int[][] compat = compatible[i2]; // 像素i2位置，对于pattern T，可兼容的pattern数量列表
 
@@ -200,11 +211,12 @@ namespace WaveFunctionCollapse
 
         public void Setup(int seed)
         {
-            if (wave == null) Init();
-
+            if (wave == null)
+            {
+                Init();
+            }
             Clear();
             random = new Random(seed);
-
             setuped = true;
         }
 
