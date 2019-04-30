@@ -18,6 +18,14 @@ namespace WaveFunctionCollapse
         Finish,
     }
 
+    public enum Direction
+    {
+        Left,
+        Down,
+        Right,
+        Up,
+    }
+
     public abstract class Model
     {
         protected bool[][] wave; // wave[FMX*FMY][T]，每个元素代表某个pattern在某个像素位置的状态，true代表not forbidden, false 代表forbidden，初始状态为true
@@ -29,7 +37,7 @@ namespace WaveFunctionCollapse
         Stack<Tuple<int, int>> bannedStack; // Tuple<int, int>存的被ban掉的像素位置索引和对应的pattern索引
 
         protected Random random;
-        protected int FMX, FMY; //  输出图片的width和height
+        public int FMX, FMY; //  输出图片的width和height
         protected int patternCount; // 不重复的pattern数量
         protected bool periodic; // whether output graphics is periodic
 
@@ -45,7 +53,7 @@ namespace WaveFunctionCollapse
 
         private bool setuped;
 
-        protected bool done;
+        public bool done;
 
         protected Model(int width, int height)
         {
@@ -284,7 +292,6 @@ namespace WaveFunctionCollapse
         }
 
         protected abstract bool OnBoundary(int x, int y);
-        public abstract UnityEngine.Texture2D Graphics();
 
         protected static int[] DX = { -1, 0, 1, 0 };
         protected static int[] DY = { 0, 1, 0, -1 };

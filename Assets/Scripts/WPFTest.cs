@@ -86,7 +86,8 @@ public class WPFTest : MonoBehaviour {
     {
         if (GUI.Button(new Rect(30, 30, 300, 50), "Start"))
         {
-            model = new OverlappingModel(texture, N, width, height, periodicInput, periodicOutput, symmetry, ground);
+            var adaptar = new WFCAdaptar(texture);
+            model = new OverlappingModel(adaptar.sample, adaptar.colorPalette, N, width, height, periodicInput, periodicOutput, symmetry, ground);
             if (seed == 0)
             {
                 model.Setup(Random.Range(0, int.MaxValue));
@@ -97,24 +98,6 @@ public class WPFTest : MonoBehaviour {
             }
             started = true;
             pause = false;
-        
-            //for (int k = 0; k < 2; k++)
-            //{
-            //    int seed = Random.Range(0, int.MaxValue);
-            //    bool finished = model.Run(seed, limit);
-            //    if (finished)
-            //    {
-            //        Debug.Log("FINISH");
-
-            //        model.Capture(colors);
-
-            //        outputTexture.SetPixels32(colors);
-            //        outputTexture.Apply();
-
-            //        break;
-            //    }
-            //    else Debug.Log("CONTRADICTION");
-            //}
         }
 
         if (GUI.Button(new Rect(30, 100, 300, 50), "ToggleStop"))

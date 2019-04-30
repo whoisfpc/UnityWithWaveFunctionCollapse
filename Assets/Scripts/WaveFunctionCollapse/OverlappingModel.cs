@@ -70,37 +70,26 @@ namespace WaveFunctionCollapse
         List<Color32> colors; // unique colors
         int ground;
 
-        public OverlappingModel(Texture2D texture, int N, int width, int height, bool periodicInput, bool periodicOutput, int symmetry, int ground)
-            : base(width, height)
+        public OverlappingModel(byte[,] sample, List<Color32> colors, int N, int outputWidth, int outputHeight, bool periodicInput, bool periodicOutput, int symmetry, int ground)
+            : base(outputWidth, outputHeight)
         {
+            this.colors = colors;
             this.N = N; // Sample Length
             periodic = periodicOutput; // whether output graphics is periodic
-
-            int SMX = texture.width, SMY = texture.height; // Sample texture width and height
-            byte[,] sample = new byte[SMX, SMY]; // to hold the color index, sample[SMX, SMY]
-            colors = new List<Color32>();
-            var tmpColors = texture.GetPixels32(); // TODO: (0, 0) 点在左下角
-            // Record color, and make a color-index list
-            for (int y = 0; y < SMY; y++) for (int x = 0; x < SMX; x++)
-            {
-                Color32 color = tmpColors[x + (SMY - 1 - y) * SMX];
-
-                int i = 0;
-                foreach (var c in colors)
-                {
-                    if (c.a == color.a && c.r == color.r && c.g == color.g && c.b == color.b) break;
-                    i++;
-                }
-
-                if (i == colors.Count) colors.Add(color);
-                sample[x, y] = (byte)i;
-            }
+            var SMX = sample.GetLength(0);
+            var SMY = sample.GetLength(1);
 
             // Process raw patterns, return a new pattern (N*N byte array)
             byte[] getPattern (Func<int, int, byte>  f)
             {
                 byte[] result = new byte[N * N];
-                for (int y = 0; y < N; y++) for (int x = 0; x < N; x++) result[x + y * N] = f(x, y);
+                for (int y = 0; y < N; y++)
+                {
+                    for (int x = 0; x < N; x++)
+                    {
+                        result[x + y * N] = f(x, y);
+                    }
+                }
                 return result;
             };
 
@@ -114,7 +103,9 @@ namespace WaveFunctionCollapse
             // Dictionary<long, int> weights = new Dictionary<long, int>();
             Dictionary<Pattern, int> patternDict = new Dictionary<Pattern, int>();
 
-            for (int y = 0; y < (periodicInput ? SMY : SMY - N + 1); y++) for (int x = 0; x < (periodicInput ? SMX : SMX - N + 1); x++)
+            for (int y = 0; y < (periodicInput ? SMY : SMY - N + 1); y++)
+            {
+                for (int x = 0; x < (periodicInput ? SMX : SMX - N + 1); x++)
                 {
                     byte[][] ps = new byte[8][];
 
@@ -143,6 +134,7 @@ namespace WaveFunctionCollapse
                         }
                     }
                 }
+            }
 
             // patternCount = weights.Count;// 不重复的pattern数量
             patternCount = patternDict.Count;
@@ -188,6 +180,28 @@ namespace WaveFunctionCollapse
         //检测给定的的位置是否到达边界（不够N*N的大小），输出图像为periodic时始终返回false
         protected override bool OnBoundary(int x, int y) => !periodic && (x + N > FMX || y + N > FMY || x < 0 || y < 0);
 
+        protected override void Clear()
+        {
+            base.Clear();
+
+            if (ground != 0)
+            {
+                for (int x = 0; x < FMX; x++)
+                {
+                    // 对于最后一行，只保留ground pattern
+                    for (int t = 0; t < patternCount; t++)
+                        if (t != ground)
+                            Ban(x + (FMY - 1) * FMX, t);
+
+                    // 对于其他所有的位置，去除ground pattern
+                    for (int y = 0; y < FMY - 1; y++)
+                        Ban(x + y * FMX, ground);
+                }
+
+                Propagate();
+            }
+        }
+        
         public void Capture(Color32[] bitmapData)
         {
             if (bitmapData == null || bitmapData.Length != FMX * FMY)
@@ -216,7 +230,9 @@ namespace WaveFunctionCollapse
                     int r = 0, g = 0, b = 0;
                     int x = i % FMX, y = i / FMX;
 
-                    for (int dy = 0; dy < N; dy++) for (int dx = 0; dx < N; dx++)
+                    for (int dy = 0; dy < N; dy++)
+                    {
+                        for (int dx = 0; dx < N; dx++)
                         {
                             int sx = x - dx;
                             if (sx < 0) sx += FMX;
@@ -226,7 +242,9 @@ namespace WaveFunctionCollapse
 
                             int s = sx + sy * FMX;
                             if (OnBoundary(sx, sy)) continue;
-                            for (int t = 0; t < patternCount; t++) if (wave[s][t])
+                            for (int t = 0; t < patternCount; t++)
+                            {
+                                if (wave[s][t])
                                 {
                                     contributors++;
                                     Color32 color = colors[patterns[t].bytes[dx + dy * N]];
@@ -234,7 +252,9 @@ namespace WaveFunctionCollapse
                                     g += color.g;
                                     b += color.b;
                                 }
+                            }
                         }
+                    }
 
                     bitmapData[i] = new Color32();
                     bitmapData[i].a = 0xFF;
@@ -244,6 +264,7 @@ namespace WaveFunctionCollapse
                 }
             }
 
+            // flip Y-axis
             for (int y = 0; y < FMY / 2; y++)
             {
                 for (int x = 0; x < FMX; x++)
@@ -252,43 +273,6 @@ namespace WaveFunctionCollapse
                     bitmapData[x + y * FMX] = bitmapData[x + (FMY - 1 - y) * FMX];
                     bitmapData[x + (FMY - 1 - y) * FMX] = tmp;
                 }
-            }
-        }
-
-        public override Texture2D Graphics()
-        {
-            Texture2D result = new Texture2D(FMX, FMY, TextureFormat.RGBA32, false, true);
-            result.filterMode = FilterMode.Point;
-            result.wrapMode = TextureWrapMode.Clamp;
-            Color32[] bitmapData = new Color32[result.height * result.width];
-
-            Capture(bitmapData);
-
-            result.SetPixels32(bitmapData);
-            result.Apply();
-
-            return result;
-        }
-
-        protected override void Clear()
-        {
-            base.Clear();
-
-            if (ground != 0)
-            {
-                for (int x = 0; x < FMX; x++)
-                {
-                    // 对于最后一行，只保留ground pattern
-                    for (int t = 0; t < patternCount; t++)
-                        if (t != ground)
-                            Ban(x + (FMY - 1) * FMX, t);
-
-                    // 对于其他所有的位置，去除ground pattern
-                    for (int y = 0; y < FMY - 1; y++)
-                        Ban(x + y * FMX, ground);
-                }
-
-                Propagate();
             }
         }
     }
