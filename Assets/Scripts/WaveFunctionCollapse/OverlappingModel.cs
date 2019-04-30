@@ -156,7 +156,7 @@ namespace WaveFunctionCollapse
                 base.weights[kv.Key.idx] = kv.Value;
             }
 
-            // 判断pattern2在移动(dx,dy)后，是否和pattern1重叠
+            // 判断pattern1在移动(dx,dy)后，是否和pattern2重叠
             Func<byte[], byte[], int, int, bool> agrees = (byte[] p1, byte[] p2, int dx, int dy) =>
             {
                 int xmin = dx < 0 ? 0 : dx;
