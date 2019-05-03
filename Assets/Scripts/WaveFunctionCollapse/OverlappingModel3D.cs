@@ -163,7 +163,6 @@ namespace WaveFunctionCollapse
             {
                 for (int i = 0; i < wave.Length; i++)
                 {
-                    int ts = 0;
                     for (int t = 0; t < patternCount; t++)
                     {
                         if (wave[i][t])
