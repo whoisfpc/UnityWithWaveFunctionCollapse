@@ -129,8 +129,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 642595971}
-  - component: {fileID: 642595970}
   - component: {fileID: 642595972}
+  - component: {fileID: 642595970}
   m_Layer: 0
   m_Name: VoxelPresent
   m_TagString: Untagged
@@ -147,12 +147,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 642595969}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e26f929149a89ba4dbed9174179bf0d1, type: 3}
+  m_Script: {fileID: 11500000, guid: f5a21537a5b494b4fa44edae13766ede, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cubePrefab: {fileID: 5279795969829425100, guid: 029e0171cb7908a4d9a1feaae128eec1,
-    type: 3}
-  voxelPath: Voxels/mou.vox
+  voxelPath: Voxels/monu10.vox
+  stride: 50
 --- !u!4 &642595971
 Transform:
   m_ObjectHideFlags: 0
@@ -174,14 +173,16 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 642595969}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fdc887f87f8fa9e4e9df05e69faa0483, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   cubeMeshFilter: {fileID: 5990243096469721003, guid: 029e0171cb7908a4d9a1feaae128eec1,
     type: 3}
-  voxelPath: Voxels/monu10.vox
+  bounds:
+    m_Center: {x: 0, y: 0, z: 0}
+    m_Extent: {x: 0, y: 0, z: 0}
 --- !u!1 &900182361
 GameObject:
   m_ObjectHideFlags: 0
@@ -349,8 +350,8 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1932184749}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: -10}
+  m_LocalRotation: {x: -0.123640575, y: 0.53303915, z: -0.07910422, w: -0.83326155}
+  m_LocalPosition: {x: 182.60115, y: 102.81406, z: -21.908562}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}

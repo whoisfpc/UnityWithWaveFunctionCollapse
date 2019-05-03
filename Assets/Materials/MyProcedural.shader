@@ -20,6 +20,11 @@
                 float3 normal;
             };
 
+            struct Xyzi {
+                float3 position;
+                uint colorIdx;
+            };
+
             struct v2f {
                 float4 pos : SV_POSITION;
                 float4 col : COLOR;
@@ -29,7 +34,7 @@
             float4 _Color;
             
             StructuredBuffer<Point> points;
-            StructuredBuffer<float3> offsets;
+            StructuredBuffer<Xyzi> offsets;
             StructuredBuffer<float3> colors;
 
             v2f vert(uint id : SV_VertexID, uint inst : SV_InstanceID)
@@ -37,7 +42,7 @@
                 v2f o;
 
                 // Position
-                float4 pos = float4(points[id].vertex + offsets[inst], 1.0f);
+                float4 pos = float4(points[id].vertex + offsets[inst].position, 1.0f);
                 float4 nor = float4(points[id].normal, 1.0f);
                 o.pos = UnityObjectToClipPos(pos);
 
@@ -46,7 +51,7 @@
                 float4 AmbientLight = UNITY_LIGHTMODEL_AMBIENT;
                 float4 LightDirection = normalize(_WorldSpaceLightPos0);
                 float4 DiffuseLight = saturate(dot(LightDirection, normalDirection))*_LightColor0;
-                o.col = float4(AmbientLight + DiffuseLight) * float4(colors[inst], 1.0f);
+                o.col = float4(AmbientLight + DiffuseLight) * float4(colors[offsets[inst].colorIdx], 1.0f);
                 
                 return o;
             }
