@@ -20,7 +20,7 @@ public class VoxelProcedural : MonoBehaviour
     }
 
     Material material;
-    int instanceCount = 1;
+    int instanceCount;
     Vector3[] vertices;
     int[] triangles;
     GraphicsBuffer indexBuffer;

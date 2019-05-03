@@ -50,11 +50,11 @@ public class VoxelProvider : MonoBehaviour
         for (int i = 0; i < stride && idx < offsets.Length; i++, idx++)
         {
             var xyzi = voxels[idx];
-            offsets[idx] =  new VoxelProcedural.Offset()
+            offsets[idx] = new VoxelProcedural.Offset()
             {
                 position = transform.position + new Vector3(xyzi.X, xyzi.Z, xyzi.Y),
                 colorIdx = xyzi.I,
-            };           
+            };
         }
         voxelProcedural.SetOffsets(offsets, idx);
     }

@@ -130,7 +130,7 @@ GameObject:
   m_Component:
   - component: {fileID: 642595971}
   - component: {fileID: 642595972}
-  - component: {fileID: 642595970}
+  - component: {fileID: 642595973}
   m_Layer: 0
   m_Name: VoxelPresent
   m_TagString: Untagged
@@ -138,20 +138,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &642595970
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 642595969}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5a21537a5b494b4fa44edae13766ede, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  voxelPath: Voxels/monu10.vox
-  stride: 50
 --- !u!4 &642595971
 Transform:
   m_ObjectHideFlags: 0
@@ -183,6 +169,26 @@ MonoBehaviour:
   bounds:
     m_Center: {x: 0, y: 0, z: 0}
     m_Extent: {x: 0, y: 0, z: 0}
+--- !u!114 &642595973
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 642595969}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e42fd29cd10c944184451d184f85ee7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  seed: 9527
+  step: 1
+  N: 2
+  FMX: 20
+  FMY: 20
+  FMZ: 20
+  limit: 0
+  voxelPath: Voxels/wfc.vox
 --- !u!1 &900182361
 GameObject:
   m_ObjectHideFlags: 0
