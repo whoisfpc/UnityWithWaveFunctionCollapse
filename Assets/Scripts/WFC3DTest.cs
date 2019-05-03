@@ -97,8 +97,27 @@ public class WFC3DTest : MonoBehaviour {
                 }
                 case ObserveResult.Progress:
                 {
-
-                   break;
+                    var data = new byte[FMX * FMY * FMZ];
+                    model.Capture(data);
+                    int tot = 0;
+                    var FMO = FMX * FMY;
+                    for (int i = 0; i < data.Length; i++)
+                    {
+                        if (data[i] != 0)
+                        {
+                            var x = i % FMO % FMX; 
+                            var y = i % FMO / FMX;
+                            var z = i / FMO;
+                            offsets[tot] = new VoxelProcedural.Offset()
+                            {
+                                position = new Vector3(x, z, y), // swap Y and Z axis
+                                colorIdx = data[i],
+                            };
+                            tot++;
+                        }
+                    }
+                    voxelProcedural.SetOffsets(offsets, tot);
+                    break;
                 }
                 case ObserveResult.Contradiction:
                 {

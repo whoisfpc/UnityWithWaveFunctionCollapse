@@ -159,6 +159,28 @@ namespace WaveFunctionCollapse
                     }
                 }
             }
+            else
+            {
+                for (int i = 0; i < wave.Length; i++)
+                {
+                    int ts = 0;
+                    for (int t = 0; t < patternCount; t++)
+                    {
+                        if (wave[i][t])
+                        {
+                            if (data[i] == 0)
+                            {
+                                data[i] = patterns[t].bytes[0];
+                            }
+                            else if (data[i] != patterns[t].bytes[0])
+                            {
+                                data[i] = 0;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
